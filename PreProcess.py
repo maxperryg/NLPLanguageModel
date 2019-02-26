@@ -1,72 +1,52 @@
-def pre_process(train, brown_test, lerner_test):
+def pre_process(train, brown_test, learner_test):
 
-    # open the training file to read and the resulting file to be written to
-    training_corpus = open(train, "r")
-    brown_test_corpus = open(brown_test, "r")
-    learner_test_corpus = open(lerner_test, "r")
+    # open the training file to read, assign the content variables
+    #   training_corpus
+    #   brown_test_corpus
+    #   learner_test_corpus
+    training_corpus = open(train, "r").readlines()
+    brown_test_corpus = open(brown_test, "r").readlines()
+    learner_test_corpus = open(learner_test, "r").readlines()
 
-    #post = open(out_file, "w")
+    # lowercase and pad all corpora with <s> and </s>
+    training_corpus = lower_and_pad(training_corpus)
+    brown_test_corpus = lower_and_pad(brown_test_corpus)
+    learner_test_corpus = lower_and_pad(learner_test_corpus)
 
-    # assign the array of each line to training_sentences
-    training_sentences = training_corpus.readlines()
-    brown_test_sentences = brown_test_corpus.readlines()
-    lerner_test_sentences = learner_test_corpus.readlines()
-
-    # join training_sentences elements by " <S> " and replace all newline characters with " </S>
-    training_sentences = " <s> ".join(training_sentences)
-    training_sentences = training_sentences.replace("\n", " </s>")
-
-    brown_test_sentences = " <s> ".join(brown_test_sentences)
-    brown_test_sentences = brown_test_sentences.replace("\n", " </s>")
-
-    lerner_test_sentences = " <s> ".join(lerner_test_sentences)
-    lerner_test_sentences = lerner_test_sentences.replace("\n", " </s>")
-
-    # add "<S> to the beginning of the whole thing
-    training_sentences = "<s> " + training_sentences
-    brown_test_sentences = "<s> " + brown_test_sentences
-    lerner_test_sentences = "<s> " + lerner_test_sentences
-
-    # convert the whole thing to lower case
-    training_sentences = training_sentences.lower()
-    brown_test_sentences = brown_test_sentences.lower()
-    lerner_test_sentences = lerner_test_sentences.lower()
-
-    # write it to the resulting file
-    #post.writelines(training_sentences.replace("</s> ", "</s> \n"))
-
-    #create an array of all the tokens split by " "
-    training_sentences_array = training_sentences.split(" ")
-    brown_test_sentences_array = brown_test_sentences.split(" ")
-    lerner_test_sentences_array = lerner_test_sentences.split(" ")
-
-
-    # create training_dictionary and fill it with all the tokens and frequencies of them
-    training_dictionary = count(training_sentences_array)
-    brown_test_dictionary = count(brown_test_sentences_array)
-    lerner_test_dictionary = count(lerner_test_sentences_array)
-
+    # create dictionaries and fill it with all the tokens and frequencies of them
+    training_dictionary_without_unk = count(training_corpus)
+    brown_test_dictionary_without_unk = count(brown_test_corpus)
+    learner_test_dictionary_without_unk = count(learner_test_corpus)
 
     #replace words only seen once with <unk>
-    training_dictionary_with_unk = replace_with_unk(training_dictionary)
+    training_dictionary_with_unk = augment_train_with_unk(training_dictionary_without_unk)
 
     #relace any word seen in test but not train with unk and count unk
-    brown_test_dictionary_with_unk = replace_disjoint_with_unk(training_dictionary, brown_test_dictionary)
-    lerner_test_dictionary_with_unk = replace_disjoint_with_unk(training_dictionary, brown_test_dictionary)
+    brown_test_dictionary_with_unk = augment_test_with_unk(training_dictionary_without_unk, brown_test_dictionary_without_unk)
+    learner_test_dictionary_with_unk = augment_test_with_unk(training_dictionary_without_unk, learner_test_dictionary_without_unk)
+
+    return \
+        {
+            "training":
+                {
+                    "without_unk": training_dictionary_without_unk,
+                    "with_unk": training_dictionary_with_unk
+                },
+            "brown_test":
+                {
+                    "without_unk": brown_test_dictionary_without_unk,
+                    "with_unk": brown_test_dictionary_with_unk
+                },
+            "learner_test":
+                {
+                    "without_unk": learner_test_dictionary_without_unk,
+                    "with_unk": learner_test_dictionary_with_unk
+                }
+        }
 
 
-
-    return {"training_dictionary": training_dictionary, "brown_test_dictionary": brown_test_dictionary, "lerner_test_dictionary": lerner_test_dictionary}
-
-    # post.writelines("\nFull Corpus\n--------------\n")
-    # post.writelines(str(training_dictionary).replace(",", ",\n") + "\n")
-    # post.writelines("\nCorpus with <unk>\n--------------\n")
-    # post.writelines(str(training_dictionary).replace(",", ",\n")+"\n")
-    # training_corpus.close()
-    # post.close()
-
-def count(array_of_sentences):
-
+def count(sentences):
+    array_of_sentences = sentences.split(" ")
     dictionary = {}
     for token in array_of_sentences:
         if token in dictionary:
@@ -77,8 +57,7 @@ def count(array_of_sentences):
     return dictionary
 
 
-def replace_with_unk(dictionary):
-
+def augment_train_with_unk(dictionary):
     dictionary_with_unk = {}
     dictionary_with_unk["<unk>"] = 0
     for key in dictionary:
@@ -90,21 +69,65 @@ def replace_with_unk(dictionary):
     return dictionary_with_unk
 
 
-def replace_disjoint_with_unk(train, test):
-    words_not_in_trainer = list(set(test.keys()) - set(train.keys()))
-    for key in words_not_in_trainer:
-        if test.has_key(key):
-            del test[key]
-    test["<unk>"] = len(words_not_in_trainer)
-    return test
+def augment_test_with_unk(train, test):
+    dictionary_with_unk = {}
+    dictionary_with_unk["<unk>"] = 0
+    for key in test:
+        if train.has_key(key):
+            dictionary_with_unk[key] = test[key]
+        else:
+            dictionary_with_unk["<unk>"] += test[key]
+    return dictionary_with_unk
 
-#def find_percent_of_unk(train, test):
-    #return test["<unk>"] /
+
+def lower_and_pad(array_of_sentences):
+    return "<s> " + " <s> ".join(array_of_sentences).replace("\n", " </s>").lower()
+
+def calculate_percentage_types(test, train):
+    word_types_in_test = len(test)
+    word_types_in_test_not_in_train = len(set(test.keys()) - set(train.keys()))
+    return float(word_types_in_test_not_in_train) / float(word_types_in_test) * 100
+
+def calculate_percentage_tokens(test, train):
+    word_types_in_test_not_in_train = set(test.keys()) - set(train.keys())
+    tokens_in_test_not_in_train = 0
+    tokens_in_test = sum(test.values())
+    for key in word_types_in_test_not_in_train:
+        tokens_in_test_not_in_train+=test[key]
+    return float(tokens_in_test_not_in_train) / float(tokens_in_test) * 100
 
 
-dict = pre_process("brown-train.txt", "brown-test.txt", "learner-test.txt")
-wordtypes = len(dict["training_dictionary"])
-wordtokens = sum(dict["training_dictionary"].values())
+all_dictionaries = pre_process("brown-train.txt", "brown-test.txt", "learner-test.txt")
 
-print("Word types in training trainingdictionary: " + str(wordtypes) + "\n\n\n\n")
-print("Word tokens in training trainingdictionary: " + str(wordtokens) + "\n\n\n\n")
+answers = open("Answers.txt", "w")
+
+answers.writelines("1) How many word types (unique words) are there in the training corpus? Please include "
+                   "the padding symbols and the unknown token.\n\n"
+                   "Word types (unique words) in training corpus: " + str(len(all_dictionaries["training"]["with_unk"].keys())) + "\n\n")
+
+answers.writelines("2) How many word tokens are there in the training corpus?\n\n"
+                   "Word tokens in training corpus: " + str(sum(all_dictionaries["training"]["with_unk"].values())))
+
+answers.writelines("3) What percentage of word tokens and word types in each of the test corpora did not"
+                   "occur in training (before you mapped the unknown words to <unk> in training and test data)?\n\n")
+
+answers.writelines("Percentage of word types in brown test corpus that are not in training: "
+                   + str(calculate_percentage_types(all_dictionaries["brown_test"]["without_unk"], all_dictionaries["training"]["without_unk"]))
+                   + "%\n\n")
+
+answers.writelines("Percentage of word tokens in brown test corpus that are not in training: "
+                   + str(calculate_percentage_tokens(all_dictionaries["brown_test"]["without_unk"], all_dictionaries["training"]["without_unk"]))
+                   + "%\n\n")
+
+answers.writelines("Percentage of word types in learner test corpus that are not in training: "
+                   + str(calculate_percentage_types(all_dictionaries["learner_test"]["without_unk"], all_dictionaries["training"]["without_unk"]))
+                   + "%\n\n")
+
+answers.writelines("Percentage of word tokens in learner test corpus that are not in training: "
+                   + str(calculate_percentage_tokens(all_dictionaries["learner_test"]["without_unk"], all_dictionaries["training"]["without_unk"]))
+                   + "%\n\n")
+# wordtypes = len(dict["training_dictionary"])
+# wordtokens = sum(dict["training_dictionary"].values())
+#
+# print("Word types in training trainingdictionary: " + str(wordtypes) + "\n\n\n\n")
+# print("Word tokens in training trainingdictionary: " + str(wordtokens) + "\n\n\n\n")
