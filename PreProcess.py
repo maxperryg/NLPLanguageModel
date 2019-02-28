@@ -113,40 +113,35 @@ def calculate_unigram(training_corpus):
     if "<s>" in new:
         del new["<s>"]
     total = sum(new.values())
-    ans = {key: math.log(value/total, 2) for key, value in new.items()}
+    ans = {key: value/total for key, value in new.items()}
     return ans
 
 
 def calculate_bigram(training_corpus, training_dictionary):
     text = training_corpus.split()
-    bigram = {}
+    bigram = dict(training_dictionary)
+    keys = {key: 0 for key, value in training_dictionary.items()}
+    for key in bigram:
+        bigram[key] = dict(keys)
     for i in range(len(text[:-1])):
-        if text[i] not in bigram:
-            bigram[text[i]] = {}
-            bigram[text[i]][text[i+1]] = 1/training_dictionary[text[i]]
-        elif text[i + 1] not in bigram[text[i]]:
-            bigram[text[i]][text[i + 1]] = 1 / training_dictionary[text[i]]
-        else:
-            bigram[text[i]][text[i + 1]] += 1 / training_dictionary[text[i]]
+        bigram[text[i]][text[i + 1]] += 1 / training_dictionary[text[i]]
     return bigram
+
 
 def calculate_bigram_add_one(training_corpus, training_dictionary):
     text = training_corpus.split()
-    bigram = {}
+    bigram = dict(training_dictionary)
+    keys = {key: 1 for key, value in training_dictionary.items()}
+    for key in bigram:
+        bigram[key] = dict(keys)
     for i in range(len(text[:-1])):
-        if text[i] not in bigram:
-            bigram[text[i]] = {}
-            bigram[text[i]][text[i+1]] = 1/training_dictionary[text[i]]
-        elif text[i + 1] not in bigram[text[i]]:
-            bigram[text[i]][text[i + 1]] = 1 / training_dictionary[text[i]]
-        else:
-            bigram[text[i]][text[i + 1]] += 1 / training_dictionary[text[i]]
+        bigram[text[i]][text[i + 1]] += 1 / training_dictionary[text[i]] + len(training_dictionary)
     return bigram
 
 
 #all_dictionaries = pre_process("training.txt", "brown-test.txt", "learner-test.txt")
 
-brown_training_corpus_without_unk = pre_process("brown-train.txt")
+brown_training_corpus_without_unk = pre_process("training.txt")
 brown_testing_corpus_without_unk = pre_process("brown-test.txt")
 learner_testing_corpus_without_unk = pre_process("learner-test.txt")
 
@@ -164,6 +159,8 @@ learner_testing_dictionary_with_unk = count(learner_testing_corpus_with_unk)
 
 unigram_of_training = calculate_unigram(brown_training_dictionary_with_unk)
 bigram_of_training = calculate_bigram(brown_training_corpus_with_unk, brown_training_dictionary_with_unk)
+bigram_add_one_of_training = calculate_bigram_add_one(brown_training_corpus_with_unk, brown_training_dictionary_with_unk)
+
 
 print("done")
 
@@ -175,9 +172,9 @@ answers.writelines("1) How many word types (unique words) are there in the train
                    "Word types (unique words) in training corpus: " + str(len(brown_training_dictionary_with_unk.keys())) + "\n\n")
 
 answers.writelines("2) How many word tokens are there in the training corpus?\n\n"
-                   "Word tokens in training corpus: " + str(sum(brown_training_dictionary_with_unk.values())))
+                   "Word tokens in training corpus: " + str(sum(brown_training_dictionary_with_unk.values())) + "\n\n")
 
-answers.writelines("3) What percentage of word tokens and word types in each of the test corpora did not"
+answers.writelines("3) What percentage of word tokens and word types in each of the test corpora did not "
                    "occur in training (before you mapped the unknown words to <unk> in training and test data)?\n\n")
 
 answers.writelines("Percentage of word types in brown test corpus that are not in training: "
