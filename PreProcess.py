@@ -112,41 +112,81 @@ def calculate_unigram(training_corpus):
     if "<s>" in new:
         del new["<s>"]
     total = sum(new.values())
-    ans = {key: value/total for key, value in new.items()}
+    ans = {key: value for key, value in new.items()}
     return ans
 
 
 def calculate_bigram(training_corpus, training_dictionary, addn):
     text = training_corpus.split()
     #bigram = dict(training_dictionary)
-    keys = {key: addn for key, value in training_dictionary.items()}.items()
-    bigram = {key: dict(keys) for key, value in keys}
+    keys = {key: addn for key, value in training_dictionary.items()}
+    bigram = {key: dict(keys.items()) for key, value in keys.items()}
     for i in range(len(text)-1):
-        bigram[text[i]][text[i + 1]] = bigram[text[i]][text[i + 1]] + 1 / training_dictionary[text[i]]
+        bigram[text[i]][text[i + 1]] += 1
+    # / training_dictionary[text[i]]
     return bigram
 
 
+def calculate_bigram_percentage_unseen(bigram_test, bigram_train):
+    in_test = set()
+    in_train = set()
+    count_tokens_in_test_not_in_train = 0
+    count_tokens_in_test = 0
+    for key in bigram_test.keys():
+        for second_key in bigram_test[key]:
+            if bigram_test[key][second_key] != 0:
+                tup = (key, second_key)
+                in_test.add(tup)
+    for key in bigram_train.keys():
+        for second_key in bigram_train[key]:
+            if bigram_train[key][second_key] != 0:
+                tup = (key, second_key)
+                in_train.add(tup)
+    in_test_not_in_train = set(in_test - in_train)
+    for tup in in_test_not_in_train:
+        count_tokens_in_test_not_in_train += bigram_test[tup[0]][tup[1]]
+    for tup in in_test:
+        count_tokens_in_test += bigram_test[tup[0]][tup[1]]
+
+    percent_types = len(in_test_not_in_train) / len(in_test) * 100
+    percent_tokens = count_tokens_in_test_not_in_train / count_tokens_in_test * 100
+    # for i in range(len(test_text)-1):
+    #     if test_text[i] in bigram_train:
+    #         if test_text[i+1] in bigram_train[test_text[i]]:
+    #             intersection.add({test_text[i]:test_text[i+1]})
+    #         else:
+    #             only_test.add({test_text[i]:test_text[i+1]})
+
+
+
+    return [percent_types, percent_tokens]
+
 #all_dictionaries = pre_process("training.txt", "brown-test.txt", "learner-test.txt")
 
-brown_training_corpus_without_unk = pre_process("brown-train.txt")
-brown_testing_corpus_without_unk = pre_process("brown-test.txt")
-learner_testing_corpus_without_unk = pre_process("learner-test.txt")
+brown_training_corpus_without_unk = pre_process("training.txt")
+brown_testing_corpus_without_unk = pre_process("test.txt")
+# learner_testing_corpus_without_unk = pre_process("learner-test.txt")
 
 brown_training_corpus_with_unk = add_unk_to_training_corpus(brown_training_corpus_without_unk)
 brown_testing_corpus_with_unk = add_unk_to_testing_corpus(brown_training_corpus_without_unk, brown_testing_corpus_without_unk)
-learner_testing_corpus_with_unk = add_unk_to_testing_corpus(brown_training_corpus_without_unk, learner_testing_corpus_without_unk)
+# learner_testing_corpus_with_unk = add_unk_to_testing_corpus(brown_training_corpus_without_unk, learner_testing_corpus_without_unk)
 
 brown_training_dictionary_without_unk = count(brown_training_corpus_without_unk)
 brown_testing_dictionary_without_unk = count(brown_testing_corpus_without_unk)
-learner_testing_dictionary_without_unk = count(learner_testing_corpus_without_unk)
+# learner_testing_dictionary_without_unk = count(learner_testing_corpus_without_unk)
 
 brown_training_dictionary_with_unk = count(brown_training_corpus_with_unk)
 brown_testing_dictionary_with_unk = count(brown_testing_corpus_with_unk)
-learner_testing_dictionary_with_unk = count(learner_testing_corpus_with_unk)
+# learner_testing_dictionary_with_unk = count(learner_testing_corpus_with_unk)
 
-unigram_of_training = calculate_unigram(brown_training_dictionary_with_unk)
-bigram_of_training = calculate_bigram(brown_training_corpus_with_unk, brown_training_dictionary_with_unk, 0)
-bigram_add_one_of_training = calculate_bigram(brown_training_corpus_with_unk, brown_training_dictionary_with_unk, 1)
+unigram_count_of_training = calculate_unigram(brown_training_dictionary_with_unk)
+
+bigram_count_of_training = calculate_bigram(brown_training_corpus_with_unk, brown_training_dictionary_with_unk, 0)
+bigram_count_add_one_of_training = calculate_bigram(brown_training_corpus_with_unk, brown_training_dictionary_with_unk, 1)
+bigram_count_of_brown_test = calculate_bigram(brown_testing_corpus_with_unk, brown_testing_dictionary_with_unk, 0)
+# bigram_count_of_learner_test = calculate_bigram(learner_testing_corpus_with_unk, learner_testing_dictionary_with_unk, 0)
+
+percentage_brown_bigram_unseen = calculate_bigram_percentage_unseen(bigram_count_of_brown_test, bigram_count_of_training)
 
 
 print("done")
