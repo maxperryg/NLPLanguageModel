@@ -69,8 +69,8 @@ def add_unk_to_training_corpus(corpus_without_unk):
     return new_corpus.rstrip()
 
 
-def add_unk_to_testing_corpus(training_corpus_without_unk, testing_corpus_without_unk):
-    dictionary = count(training_corpus_without_unk)
+def add_unk_to_testing_corpus(training_corpus_with_unk, testing_corpus_without_unk):
+    dictionary = count(training_corpus_with_unk)
     new_corpus = ""
     for token in testing_corpus_without_unk.split(" "):
         if token in dictionary:
@@ -159,39 +159,160 @@ def calculate_bigram_percentage_unseen(bigram_test, bigram_train):
 
 
 
-    return [percent_types, percent_tokens]
+    return [percent_types, percent_tokens]\
+
+
+def unigram_log_prob_of(test_sentence, unigram_count_of_training):
+    ans = ""
+    text = test_sentence.replace("<s> ", "").split(" ")
+    total = sum(unigram_count_of_training.values())
+    log_prob = 0
+    for key in unigram_count_of_training:
+        unigram_count_of_training[key] /= total
+    for word in text:
+        log_prob += math.log(unigram_count_of_training[word], 2)
+        ans += "log probability of " + word + " ( " + str(math.log(unigram_count_of_training[word], 2)) + ") + \n"
+    ans += "= " + str(log_prob) + "\n\n"
+    ans += "average log probability is log probability(" + str(log_prob) + ") / " + "the amount of words in the test sentence (" + str(len(text)) + ") = "
+    avg_log_prob = log_prob/len(text)
+    ans += str(avg_log_prob) + "\n\n"
+    ans += "perplexity is 2^(-average log probability) = "
+    perplexity = 2 ** -avg_log_prob
+    ans += str(perplexity) + "\n\n"
+    return ans
+
+
+def unigram_log_prob_of_test(test_sentence, unigram_count_of_training):
+    ans = ""
+    text = test_sentence.replace("<s> ", "").split(" ")
+    total = sum(unigram_count_of_training.values())
+    log_prob = 0
+    for key in unigram_count_of_training:
+        unigram_count_of_training[key] /= total
+    for word in text:
+        log_prob += math.log(unigram_count_of_training[word], 2)
+    avg_log_prob = log_prob/len(text)
+    ans += "perplexity is = "
+    perplexity = 2 ** -avg_log_prob
+    ans += str(perplexity) + "\n\n"
+    return ans
+
+
+def bigram_log_prob_of(test_sentence, bigram_count_of_training, training_dictionary_with_unk):
+    ans = ""
+    text = test_sentence.split(" ")
+    log_prob = 0
+    for i in range(len(text)-1):
+        if bigram_count_of_training[text[i]][text[i+1]] == 0:
+            ans = ""
+            ans += "'" + text[i] + ", " + text[i+1] + "' and possibly more parameters is/are unseen so probability of the sentence is undefined"
+            return ans
+        else:
+            this_one = math.log((bigram_count_of_training[text[i]][text[i + 1]] / (training_dictionary_with_unk[text[i]])), 2)
+            ans += "log probability of " + text[i] + " " + text[i + 1] + " ( " + str(this_one) + ") + \n"
+            log_prob += this_one
+    ans += "= " + str(log_prob) + "\n\n"
+    ans += "average log probability is log probability(" + str(
+        log_prob) + ") / " + "the amount of words in the test sentence (" + str(len(text)) + ") = "
+    avg_log_prob = log_prob / len(text)
+    ans += str(avg_log_prob) + "\n\n"
+    ans += "perplexity is 2^(-average log probability) = "
+    perplexity = 2 ** -avg_log_prob
+    ans += str(perplexity) + "\n\n"
+    return ans
+
+
+def bigram_log_prob_of_test(test_sentence, bigram_count_of_training, training_dictionary_with_unk):
+    ans = ""
+    text = test_sentence.split(" ")
+    log_prob = 0
+    for i in range(len(text)-1):
+        if bigram_count_of_training[text[i]][text[i+1]] == 0:
+            ans = ""
+            ans += "'" + text[i] + ", " + text[i+1] + "' and possibly more parameters is/are unseen so probability of the sentence is undefined"
+            return ans
+        else:
+            this_one = math.log((bigram_count_of_training[text[i]][text[i + 1]] / (training_dictionary_with_unk[text[i]])), 2)
+            log_prob += this_one
+    avg_log_prob = log_prob / len(text)
+    ans += "perplexity is = "
+    perplexity = 2 ** -avg_log_prob
+    ans += str(perplexity) + "\n\n"
+    return ans
+
+
+def bigram_add_one_log_prob_of(test_sentence, bigram_count_of_training, training_dictionary_with_unk):
+    ans = ""
+    text = test_sentence.split(" ")
+    log_prob = 0
+    for i in range(len(text)-1):
+        this_one = math.log((bigram_count_of_training[text[i]][text[i+1]] / (training_dictionary_with_unk[text[i]] + len(training_dictionary_with_unk))), 2)
+        ans += "log probability of " + text[i] + " " + text[i+1] + " ( " + str(this_one) + ") + \n"
+        log_prob += this_one
+    ans += "is " + str(log_prob) + "\n\n"
+    ans += "average log probability is log probability(" + str(log_prob) + ") / " + "the amount of words in the test sentence (" + str(len(text)) + ") = "
+    avg_log_prob = log_prob / len(text)
+    ans += str(avg_log_prob) + "\n\n"
+    ans += "perplexity is 2^(-average log probability) = "
+    perplexity = 2 ** -avg_log_prob
+    ans += str(perplexity) + "\n\n"
+    return ans
+
+
+def bigram_add_one_log_prob_of_test(test_sentence, bigram_count_of_training, training_dictionary_with_unk):
+    ans = ""
+    text = test_sentence.split(" ")
+    log_prob = 0
+    for i in range(len(text)-1):
+        this_one = math.log((bigram_count_of_training[text[i]][text[i+1]] / (training_dictionary_with_unk[text[i]] + len(training_dictionary_with_unk))), 2)
+        log_prob += this_one
+    avg_log_prob = log_prob / len(text)
+    ans += "perplexity is = "
+    perplexity = 2 ** -avg_log_prob
+    ans += str(perplexity) + "\n\n"
+    return ans
 
 #all_dictionaries = pre_process("training.txt", "brown-test.txt", "learner-test.txt")
 
-brown_training_corpus_without_unk = pre_process("training.txt")
-brown_testing_corpus_without_unk = pre_process("test.txt")
-# learner_testing_corpus_without_unk = pre_process("learner-test.txt")
+
+brown_training_corpus_without_unk = pre_process("brown-train.txt")
+brown_testing_corpus_without_unk = pre_process("brown-test.txt")
+learner_testing_corpus_without_unk = pre_process("learner-test.txt")
 
 brown_training_corpus_with_unk = add_unk_to_training_corpus(brown_training_corpus_without_unk)
-brown_testing_corpus_with_unk = add_unk_to_testing_corpus(brown_training_corpus_without_unk, brown_testing_corpus_without_unk)
-# learner_testing_corpus_with_unk = add_unk_to_testing_corpus(brown_training_corpus_without_unk, learner_testing_corpus_without_unk)
+brown_testing_corpus_with_unk = add_unk_to_testing_corpus(brown_training_corpus_with_unk, brown_testing_corpus_without_unk)
+learner_testing_corpus_with_unk = add_unk_to_testing_corpus(brown_training_corpus_with_unk, learner_testing_corpus_without_unk)
 
 brown_training_dictionary_without_unk = count(brown_training_corpus_without_unk)
 brown_testing_dictionary_without_unk = count(brown_testing_corpus_without_unk)
-# learner_testing_dictionary_without_unk = count(learner_testing_corpus_without_unk)
+learner_testing_dictionary_without_unk = count(learner_testing_corpus_without_unk)
 
 brown_training_dictionary_with_unk = count(brown_training_corpus_with_unk)
 brown_testing_dictionary_with_unk = count(brown_testing_corpus_with_unk)
-# learner_testing_dictionary_with_unk = count(learner_testing_corpus_with_unk)
+learner_testing_dictionary_with_unk = count(learner_testing_corpus_with_unk)
 
 unigram_count_of_training = calculate_unigram(brown_training_dictionary_with_unk)
 
 bigram_count_of_training = calculate_bigram(brown_training_corpus_with_unk, brown_training_dictionary_with_unk, 0)
 bigram_count_add_one_of_training = calculate_bigram(brown_training_corpus_with_unk, brown_training_dictionary_with_unk, 1)
 bigram_count_of_brown_test = calculate_bigram(brown_testing_corpus_with_unk, brown_testing_dictionary_with_unk, 0)
-# bigram_count_of_learner_test = calculate_bigram(learner_testing_corpus_with_unk, learner_testing_dictionary_with_unk, 0)
+bigram_count_of_learner_test = calculate_bigram(learner_testing_corpus_with_unk, learner_testing_dictionary_with_unk, 0)
 
 percentage_brown_bigram_unseen = calculate_bigram_percentage_unseen(bigram_count_of_brown_test, bigram_count_of_training)
+percentage_learner_bigram_unseen = calculate_bigram_percentage_unseen(bigram_count_of_learner_test, bigram_count_of_training)
+
+quest6test1 = pre_process("quest6test1.txt")
+quest6test2 = pre_process("quest6test2.txt")
+quest6test3 = pre_process("quest6test3.txt")
+
+quest6test1_with_unk = add_unk_to_testing_corpus(brown_training_corpus_with_unk, quest6test1)
+quest6test2_with_unk = add_unk_to_testing_corpus(brown_training_corpus_with_unk, quest6test2)
+quest6test3_with_unk = add_unk_to_testing_corpus(brown_training_corpus_with_unk, quest6test3)
+
 
 
 print("done")
 
-print(sum(brown_training_dictionary_with_unk.values()))
 answers = open("Answers.txt", "w")
 
 answers.writelines("1) How many word types (unique words) are there in the training corpus? Please include "
@@ -220,6 +341,49 @@ answers.writelines("Percentage of word tokens in learner test corpus that are no
                    + str(calculate_percentage_tokens(learner_testing_dictionary_without_unk, brown_training_dictionary_without_unk))
                    + "%\n\n")
 
+answers.writelines("4) What percentage of bigrams (bigram types and bigram tokens) in each of the test corpora that did"
+                   " not occur in training (treat <unk> as a token that has been observed)?\n\n")
+
+answers.writelines("Percentage of word types in brown test bigram that are not in training: "
+                   + str(percentage_brown_bigram_unseen[0]) + "%\n\n")
+
+answers.writelines("Percentage of word tokens in brown test bigram that are not in training: "
+                   + str(percentage_brown_bigram_unseen[1]) + "%\n\n")
+
+answers.writelines("5 & 6)\n\n"
+                   "    5)Compute the log probabilities of the following sentences under the three models \n"
+                   "(ignore capitalization and pad each sentence as described above). Please list all of the\n"
+                    "parameters required to compute the probabilities and show the complete calculation.\n"
+                    "Which of the parameters have zero values under each model? Use log base 2 in your\n"
+                    "calculations. Map words not observed in the training corpus to the <unk> token.\n"
+                    "• He was laughed off the screen .\n"
+                    "• There was no compulsion behind them .\n"
+                    "• I look forward to hearing your reply .\n\n"
+                    "   6) Compute the perplexities of each of the sentences above under each of the models.\n\n"
+                   + "UNIGRAM MLE for " + quest6test1 + "\n\n" + unigram_log_prob_of(quest6test1_with_unk, unigram_count_of_training) + "\n\n"
+                   + "UNIGRAM MLE for " + quest6test2 + "\n\n" + unigram_log_prob_of(quest6test2_with_unk, unigram_count_of_training) + "\n\n"
+                   + "UNIGRAM MLE for " + quest6test3 + "\n\n" + unigram_log_prob_of(quest6test3_with_unk, unigram_count_of_training) + "\n\n"
+                   + "BIGRAM MLE for " + quest6test1 + "\n\n" + bigram_log_prob_of(quest6test1_with_unk, bigram_count_of_training, brown_training_dictionary_with_unk) + "\n\n"
+                   + "BIGRAM MLE for " + quest6test2 + "\n\n" + bigram_log_prob_of(quest6test2_with_unk, bigram_count_of_training, brown_training_dictionary_with_unk) + "\n\n"
+                   + "BIGRAM MLE for " + quest6test3 + "\n\n" + bigram_log_prob_of(quest6test3_with_unk, bigram_count_of_training, brown_training_dictionary_with_unk) + "\n\n"
+                   + "BIGRAM ADD ONE for " + quest6test1 + "\n\n" + bigram_add_one_log_prob_of(quest6test1_with_unk, bigram_count_add_one_of_training, brown_training_dictionary_with_unk) + "\n\n"
+                   + "BIGRAM ADD ONE for " + quest6test2 + "\n\n" + bigram_add_one_log_prob_of(quest6test2_with_unk, bigram_count_add_one_of_training, brown_training_dictionary_with_unk) + "\n\n"
+                   + "BIGRAM ADD ONE for " + quest6test3 + "\n\n" + bigram_add_one_log_prob_of(quest6test3_with_unk, bigram_count_add_one_of_training, brown_training_dictionary_with_unk) + "\n\n")
+
+answers.writelines("7) Compute the perplexities of the entire test corpora, separately for the brown-test.txt"
+                    " and learner-test.txt under each of the models. Discuss the differences in the results you obtained.\n\n"
+                   + "UNIGRAM MLE for brown test"+ "\n\n" + unigram_log_prob_of_test(brown_testing_corpus_with_unk, unigram_count_of_training) + "\n\n"
+                    + "UNIGRAM MLE for learner test"+ "\n\n" + unigram_log_prob_of_test(learner_testing_corpus_with_unk, unigram_count_of_training) + "\n\n"
+                   + "BIGRAM MLE for brown test"+ "\n\n" + bigram_log_prob_of_test(brown_testing_corpus_with_unk, bigram_count_of_training, brown_training_dictionary_with_unk) + "\n\n"
+                   + "BIGRAM MLE for learner test" + "\n\n" + bigram_log_prob_of_test(learner_testing_corpus_with_unk, bigram_count_of_training, brown_training_dictionary_with_unk) + "\n\n"
+                    + "BIGRAM ADD ONE for brown test" + "\n\n" + bigram_add_one_log_prob_of_test(brown_testing_corpus_with_unk, bigram_count_add_one_of_training, brown_training_dictionary_with_unk) + "\n\n"
+                    + "BIGRAM ADD ONE for learner test" + "\n\n" + bigram_add_one_log_prob_of_test(learner_testing_corpus_with_unk, bigram_count_add_one_of_training, brown_training_dictionary_with_unk) + "\n\n")
+
+# answers.writelines("Percentage of word types in learner test bigram that are not in training: "
+#                    + str(percentage_learner_bigram_unseen[0]) + "%\n\n")
+#
+# answers.writelines("Percentage of word tokens in learner test bigram that are not in training: "
+#                    + str(percentage_learner_bigram_unseen[1]) + "%\n\n")
 
 # wordtypes = len(dict["training_dictionary"])
 # wordtokens = sum(dict["training_dictionary"].values())
